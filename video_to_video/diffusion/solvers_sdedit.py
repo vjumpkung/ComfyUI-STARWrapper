@@ -164,7 +164,7 @@ def sample_dpmpp_2m_sde(
     h_last = None
 
     for i in trange(len(sigmas) - 1):
-        # logger.info(f"step: {i}")
+        # logger.info(f"step: {i}")a
         if sigmas[i] == float("inf"):
             # Euler method
             denoised = model(noise, sigmas[i], variant_info=variant_info)
