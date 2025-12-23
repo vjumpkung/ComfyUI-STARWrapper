@@ -31,10 +31,16 @@ class STARVSRNode:
                     "FLOAT",
                     {"default": 7.5, "min": 0.0, "max": 20.0, "step": 0.1},
                 ),
-                "sampler": (["heun", "dpmpp_2m_sde"],),
-                "solver_mode": (["fast", "normal"],),
+                "sampler": (
+                    ["heun", "dpmpp_2m_sde"],
+                    {"default": "dpmpp_2m_sde"},
+                ),
+                "solver_mode": (
+                    ["fast", "normal"],
+                    {"default": "fast"},
+                ),
                 "steps": ("INT", {"default": 15, "min": 1, "max": 100, "step": 1}),
-                "seed": ("INT", {"default": 666, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
+                "seed": ("INT", {"default": 42, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
             }
         }
 
@@ -56,12 +62,12 @@ class STARVSRNode:
             "Light Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/light_deg.pt",
-                "local_path": "./pretrained_weight/light_degradation.pt",
+                "local_path": "./models/STAR/light_degradation.pt",
             },
             "Heavy Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/heavy_deg.pt",
-                "local_path": "./pretrained_weight/heavy_degradation.pt",
+                "local_path": "./models/STAR/heavy_degradation.pt",
             },
         }
 
@@ -82,7 +88,7 @@ class STARVSRNode:
             downloaded_path = hf_hub_download(
                 repo_id=config["repo_id"],
                 filename=config["filename"],
-                local_dir="./pretrained_weight",
+                local_dir="./models/STAR/",
                 local_dir_use_symlinks=False,
             )
             logger.info(f"Model downloaded to: {downloaded_path}")
