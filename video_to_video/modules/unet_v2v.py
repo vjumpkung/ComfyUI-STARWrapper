@@ -8,8 +8,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# import xformers
-# import xformers.ops
+import xformers
+import xformers.ops
 from einops import rearrange, repeat
 from fairscale.nn.checkpoint import checkpoint_wrapper
 from timm.models.vision_transformer import Mlp
@@ -144,74 +144,74 @@ def prob_mask_like(shape, prob, device):
         return mask
 
 
-# class MemoryEfficientCrossAttention(nn.Module):
-#     def __init__(
-#         self,
-#         query_dim,
-#         context_dim=None,
-#         heads=8,
-#         dim_head=64,
-#         max_bs=16384,
-#         dropout=0.0,
-#     ):
-#         super().__init__()
-#         inner_dim = dim_head * heads
-#         context_dim = default(context_dim, query_dim)
+class MemoryEfficientCrossAttention(nn.Module):
+    def __init__(
+        self,
+        query_dim,
+        context_dim=None,
+        heads=8,
+        dim_head=64,
+        max_bs=16384,
+        dropout=0.0,
+    ):
+        super().__init__()
+        inner_dim = dim_head * heads
+        context_dim = default(context_dim, query_dim)
 
-#         self.max_bs = max_bs
-#         self.heads = heads
-#         self.dim_head = dim_head
+        self.max_bs = max_bs
+        self.heads = heads
+        self.dim_head = dim_head
 
-#         self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
-#         self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
-#         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
-#         self.to_out = nn.Sequential(
-#             nn.Linear(inner_dim, query_dim), nn.Dropout(dropout)
-#         )
-#         self.attention_op: Optional[Any] = None
+        self.to_q = nn.Linear(query_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(context_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, query_dim), nn.Dropout(dropout)
+        )
+        self.attention_op: Optional[Any] = None
 
-#     def forward(self, x, context=None, mask=None):
-#         q = self.to_q(x)
-#         context = default(context, x)
-#         k = self.to_k(context)
-#         v = self.to_v(context)
+    def forward(self, x, context=None, mask=None):
+        q = self.to_q(x)
+        context = default(context, x)
+        k = self.to_k(context)
+        v = self.to_v(context)
 
-#         b, _, _ = q.shape
-#         q, k, v = map(
-#             lambda t: t.unsqueeze(3)
-#             .reshape(b, t.shape[1], self.heads, self.dim_head)
-#             .permute(0, 2, 1, 3)
-#             .reshape(b * self.heads, t.shape[1], self.dim_head)
-#             .contiguous(),
-#             (q, k, v),
-#         )
+        b, _, _ = q.shape
+        q, k, v = map(
+            lambda t: t.unsqueeze(3)
+            .reshape(b, t.shape[1], self.heads, self.dim_head)
+            .permute(0, 2, 1, 3)
+            .reshape(b * self.heads, t.shape[1], self.dim_head)
+            .contiguous(),
+            (q, k, v),
+        )
 
-#         # actually compute the attention, what we cannot get enough of.
-#         if q.shape[0] > self.max_bs:
-#             q_list = torch.chunk(q, q.shape[0] // self.max_bs, dim=0)
-#             k_list = torch.chunk(k, k.shape[0] // self.max_bs, dim=0)
-#             v_list = torch.chunk(v, v.shape[0] // self.max_bs, dim=0)
-#             out_list = []
-#             for q_1, k_1, v_1 in zip(q_list, k_list, v_list):
-#                 out = xformers.ops.memory_efficient_attention(
-#                     q_1, k_1, v_1, attn_bias=None, op=self.attention_op
-#                 )
-#                 out_list.append(out)
-#             out = torch.cat(out_list, dim=0)
-#         else:
-#             out = xformers.ops.memory_efficient_attention(
-#                 q, k, v, attn_bias=None, op=self.attention_op
-#             )
+        # actually compute the attention, what we cannot get enough of.
+        if q.shape[0] > self.max_bs:
+            q_list = torch.chunk(q, q.shape[0] // self.max_bs, dim=0)
+            k_list = torch.chunk(k, k.shape[0] // self.max_bs, dim=0)
+            v_list = torch.chunk(v, v.shape[0] // self.max_bs, dim=0)
+            out_list = []
+            for q_1, k_1, v_1 in zip(q_list, k_list, v_list):
+                out = xformers.ops.memory_efficient_attention(
+                    q_1, k_1, v_1, attn_bias=None, op=self.attention_op
+                )
+                out_list.append(out)
+            out = torch.cat(out_list, dim=0)
+        else:
+            out = xformers.ops.memory_efficient_attention(
+                q, k, v, attn_bias=None, op=self.attention_op
+            )
 
-#         if exists(mask):
-#             raise NotImplementedError
-#         out = (
-#             out.unsqueeze(0)
-#             .reshape(b, self.heads, out.shape[1], self.dim_head)
-#             .permute(0, 2, 1, 3)
-#             .reshape(b, out.shape[1], self.heads * self.dim_head)
-#         )
-#         return self.to_out(out)
+        if exists(mask):
+            raise NotImplementedError
+        out = (
+            out.unsqueeze(0)
+            .reshape(b, self.heads, out.shape[1], self.dim_head)
+            .permute(0, 2, 1, 3)
+            .reshape(b, out.shape[1], self.heads * self.dim_head)
+        )
+        return self.to_out(out)
 
 
 class RelativePositionBias(nn.Module):
@@ -451,7 +451,7 @@ class BasicTransformerBlock(nn.Module):
         super().__init__()
         self.local_type = local_type
         self.is_ctrl = is_ctrl
-        attn_cls = CrossAttention
+        attn_cls = MemoryEfficientCrossAttention
         self.disable_self_attn = disable_self_attn
         self.attn1 = attn_cls(  # self-attn
             query_dim=dim,
@@ -462,7 +462,7 @@ class BasicTransformerBlock(nn.Module):
         )
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
 
-        attn_cls2 = CrossAttention
+        attn_cls2 = MemoryEfficientCrossAttention
 
         self.attn2 = attn_cls2(
             query_dim=dim,
@@ -1914,9 +1914,9 @@ class ControlledV2VUNet(Vid2VidSDUNet):
         elif isinstance(module, CrossAttention):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)
-        # elif isinstance(module, MemoryEfficientCrossAttention):
-        #     module = checkpoint_wrapper(module) if self.use_checkpoint else module
-        #     x = module(x, context)
+        elif isinstance(module, MemoryEfficientCrossAttention):
+            module = checkpoint_wrapper(module) if self.use_checkpoint else module
+            x = module(x, context)
         elif isinstance(module, BasicTransformerBlock):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)
@@ -2356,9 +2356,9 @@ class VideoControlNet(nn.Module):
         elif isinstance(module, CrossAttention):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)
-        # elif isinstance(module, MemoryEfficientCrossAttention):
-        #     module = checkpoint_wrapper(module) if self.use_checkpoint else module
-        #     x = module(x, context)
+        elif isinstance(module, MemoryEfficientCrossAttention):
+            module = checkpoint_wrapper(module) if self.use_checkpoint else module
+            x = module(x, context)
         elif isinstance(module, BasicTransformerBlock):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)
