@@ -1,0 +1,21 @@
+# Ruff configuration file
+include = ["*/**/*.py"]
+
+# Exclude Jupyter notebook files
+extend-exclude = ["*.ipynb"]
+
+# Set line length (default is 88, matching Black)
+line-length = 88
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces for indentation
+indent-style = "space"
+
+# Normalize string quotes
+skip-magic-trailing-comma = false
+
+# Respect line endings
+line-ending = "auto"

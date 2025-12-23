@@ -1,0 +1,14 @@
+accelerate
+av
+opencv-python
+easydict
+einops
+open-clip-torch
+fairscale
+torchsde
+pytorch-lightning
+diffusers[torch]
+huggingface_hub
+numpy<2
+ruff
+transformers
