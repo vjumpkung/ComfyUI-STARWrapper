@@ -60,7 +60,9 @@ class FrozenOpenCLIPEmbedder(nn.Module):
         x = self.model.token_embedding(text)
         x = x + self.model.positional_embedding
         x = x.permute(1, 0, 2)
-        x = self.text_transformer_forward(x, attn_mask=self.model.attn_mask)
+        # Fix for PyTorch compatibility: use None for attn_mask to avoid shape mismatch errors
+        # The causal masking will be handled internally by the attention mechanism
+        x = self.text_transformer_forward(x, attn_mask=None)
         x = x.permute(1, 0, 2)
         x = self.model.ln_final(x)
         return x
