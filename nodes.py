@@ -145,7 +145,7 @@ class STARVSRNode:
         logger.info(f"Target resolution: {(target_h, target_w)}")
 
         # Prepare caption
-        caption = prompt + model_instance.positive_prompt
+        caption = prompt or model_instance.positive_prompt
         logger.info(f"Caption: {caption}")
 
         # Prepare data
