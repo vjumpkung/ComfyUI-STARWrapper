@@ -3,8 +3,8 @@ import os.path as osp
 import random
 from typing import Any, Dict
 
+import comfy.model_management
 import torch
-import torch.cuda.amp as amp
 import torch.nn.functional as F
 from diffusers import AutoencoderKLTemporalDecoder
 
@@ -109,7 +109,9 @@ class VideoToVideo_sr:
 
         y = self.text_encoder(y).detach()
 
-        with amp.autocast(enabled=True):
+        with torch.amp.autocast(
+            comfy.model_management.get_torch_device(), enabled=True
+        ):
             t = torch.LongTensor([total_noise_levels - 1]).to(self.device)
             noised_lr = self.diffusion.diffuse(video_data_feature, t)
 

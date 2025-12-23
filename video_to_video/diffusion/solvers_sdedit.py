@@ -47,6 +47,7 @@ def sample_heun(
     s_tmax=float("inf"),
     s_noise=1.0,
     show_progress=True,
+    variant_info=None,
 ):
     """
     Implements Algorithm 2 (Heun steps) from Karras et al. (2022).
@@ -56,10 +57,6 @@ def sample_heun(
     pbar = comfy.utils.ProgressBar(total_steps)
 
     for i in trange(total_steps):
-        # Check for interrupt
-        if comfy.utils.interrupt_processing():
-            raise InterruptedError("Processing interrupted by user")
-
         gamma = 0.0
         if s_tmin <= sigmas[i] <= s_tmax and sigmas[i] < float("inf"):
             gamma = min(s_churn / (len(sigmas) - 1), 2**0.5 - 1)
@@ -178,11 +175,7 @@ def sample_dpmpp_2m_sde(
     pbar = comfy.utils.ProgressBar(total_steps)
 
     for i in trange(total_steps):
-        # Check for interrupt
-        if comfy.utils.interrupt_processing():
-            raise InterruptedError("Processing interrupted by user")
-
-        # logger.info(f"step: {i}")a
+        # logger.info(f"step: {i}")
         if sigmas[i] == float("inf"):
             # Euler method
             denoised = model(noise, sigmas[i], variant_info=variant_info)
