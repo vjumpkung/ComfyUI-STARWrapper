@@ -3,7 +3,6 @@ import random
 import torch
 
 from ...video_to_video.utils.logger import get_logger
-
 from .schedules_sdedit import karras_schedule
 from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun
 

@@ -83,6 +83,7 @@ class VideoToVideo_sr:
         input: Dict[str, Any],
         total_noise_levels=1000,
         steps=50,
+        solver="dpmpp_2m_sde",
         solver_mode="fast",
         guide_scale=7.5,
         max_chunk_len=32,
@@ -122,7 +123,6 @@ class VideoToVideo_sr:
                 else None
             )
 
-            solver = "dpmpp_2m_sde"  # 'heun' | 'dpmpp_2m_sde'
             gen_vid = self.diffusion.sample_sr(
                 noise=noised_lr,
                 model=self.generator,

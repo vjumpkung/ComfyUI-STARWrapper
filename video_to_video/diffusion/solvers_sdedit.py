@@ -1,5 +1,6 @@
 # Copyright (c) Alibaba, Inc. and its affiliates.
 
+import comfy.utils
 import torch
 import torchsde
 from tqdm.auto import trange
@@ -51,7 +52,14 @@ def sample_heun(
     Implements Algorithm 2 (Heun steps) from Karras et al. (2022).
     """
     x = noise * sigmas[0]
-    for i in trange(len(sigmas) - 1, disable=not show_progress):
+    total_steps = len(sigmas) - 1
+    pbar = comfy.utils.ProgressBar(total_steps)
+
+    for i in trange(total_steps):
+        # Check for interrupt
+        if comfy.utils.interrupt_processing():
+            raise InterruptedError("Processing interrupted by user")
+
         gamma = 0.0
         if s_tmin <= sigmas[i] <= s_tmax and sigmas[i] < float("inf"):
             gamma = min(s_churn / (len(sigmas) - 1), 2**0.5 - 1)
@@ -79,6 +87,9 @@ def sample_heun(
                 d_2 = (x_2 - denoised_2) / sigmas[i + 1]
                 d_prime = (d + d_2) / 2
                 x = x + d_prime * dt
+
+        pbar.update(1)
+
     return x
 
 
@@ -163,7 +174,14 @@ def sample_dpmpp_2m_sde(
     old_denoised = None
     h_last = None
 
-    for i in trange(len(sigmas) - 1):
+    total_steps = len(sigmas) - 1
+    pbar = comfy.utils.ProgressBar(total_steps)
+
+    for i in trange(total_steps):
+        # Check for interrupt
+        if comfy.utils.interrupt_processing():
+            raise InterruptedError("Processing interrupted by user")
+
         # logger.info(f"step: {i}")a
         if sigmas[i] == float("inf"):
             # Euler method
@@ -207,6 +225,8 @@ def sample_dpmpp_2m_sde(
 
             old_denoised = denoised
             h_last = h
+
+        pbar.update(1)
 
     if variant_info is not None and variant_info.get("type") == "variant1":
         x_long, x_short = x.chunk(2, dim=0)

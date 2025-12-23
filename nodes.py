@@ -1,14 +1,15 @@
 import os
-import torch
+
 import numpy as np
+import torch
 from easydict import EasyDict
 from huggingface_hub import hf_hub_download
 
-from .video_to_video.video_to_video_model import VideoToVideo_sr
-from .video_to_video.utils.seed import setup_seed
-from .video_to_video.utils.logger import get_logger
 from .color_fix import adain_color_fix
-from .inference_utils import preprocess, tensor2vid, collate_fn
+from .inference_utils import collate_fn, preprocess, tensor2vid
+from .video_to_video.utils.logger import get_logger
+from .video_to_video.utils.seed import setup_seed
+from .video_to_video.video_to_video_model import VideoToVideo_sr
 
 logger = get_logger()
 
@@ -30,6 +31,7 @@ class STARVSRNode:
                     "FLOAT",
                     {"default": 7.5, "min": 0.0, "max": 20.0, "step": 0.1},
                 ),
+                "sampler": (["heun", "dpmpp_2m_sde"],),
                 "solver_mode": (["fast", "normal"],),
                 "steps": ("INT", {"default": 15, "min": 1, "max": 100, "step": 1}),
                 "seed": ("INT", {"default": 666, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
@@ -103,6 +105,7 @@ class STARVSRNode:
         upscale,
         max_chunk_len,
         cfg,
+        sampler,
         solver_mode,
         steps,
         seed,
@@ -167,6 +170,7 @@ class STARVSRNode:
                 data_tensor,
                 total_noise_levels,
                 steps=steps,
+                solver=sampler,
                 solver_mode=solver_mode,
                 guide_scale=cfg,
                 max_chunk_len=max_chunk_len,
