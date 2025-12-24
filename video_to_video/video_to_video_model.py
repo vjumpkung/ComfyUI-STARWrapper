@@ -258,6 +258,10 @@ class VideoToVideo_sr:
                                 module.bias.data.clone()
                             )
 
+                    # Move quantized layer to device BEFORE replacing
+                    # This initializes the quantization state properly
+                    quant_layer = quant_layer.to(self.device)
+
                     # Replace the layer
                     setattr(parent_module, name, quant_layer)
                     quantized_count += 1
