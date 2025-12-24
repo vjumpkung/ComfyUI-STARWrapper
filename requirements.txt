@@ -12,3 +12,4 @@ huggingface_hub
 numpy<2
 ruff
 transformers
+bitsandbytes

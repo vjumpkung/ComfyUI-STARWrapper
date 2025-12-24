@@ -10,7 +10,7 @@ classifiers = [
     "Environment :: GPU :: NVIDIA CUDA",    # NVIDIA CUDA support
 ]
 
-dependencies = ["accelerate", "av", "opencv-python", "easydict", "einops", "open-clip-torch", "fairscale", "torchsde", "pytorch-lightning", "diffusers[torch]", "huggingface_hub", "numpy<2", "ruff", "transformers"]
+dependencies = ["accelerate", "av", "opencv-python", "easydict", "einops", "open-clip-torch", "fairscale", "torchsde", "pytorch-lightning", "diffusers[torch]", "huggingface_hub", "numpy<2", "ruff", "transformers", "bitsandbytes"]
 
 [project.urls]
 Repository = "https://github.com/vjumpkung/ComfyUI-STARWrapper"

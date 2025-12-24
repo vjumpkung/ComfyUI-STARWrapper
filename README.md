@@ -1,4 +1,4 @@
-# STAR Video Super Resolution - ComfyUI Node
+# ComfyUI Wrapper nodes for STAR Video Super-Resolution
 
 A ComfyUI custom node wrapper for [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://github.com/NJU-PCALab/STAR), enabling high-quality video upscaling with AI-powered super-resolution.
 

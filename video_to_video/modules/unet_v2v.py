@@ -7,7 +7,6 @@ from abc import abstractmethod
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import xformers
 import xformers.ops
 from einops import rearrange, repeat
@@ -1708,9 +1707,9 @@ class Vid2VidSDUNet(nn.Module):
         elif isinstance(module, CrossAttention):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)
-        # elif isinstance(module, MemoryEfficientCrossAttention):
-        #     module = checkpoint_wrapper(module) if self.use_checkpoint else module
-        #     x = module(x, context)
+        elif isinstance(module, MemoryEfficientCrossAttention):
+            module = checkpoint_wrapper(module) if self.use_checkpoint else module
+            x = module(x, context)
         elif isinstance(module, BasicTransformerBlock):
             module = checkpoint_wrapper(module) if self.use_checkpoint else module
             x = module(x, context)

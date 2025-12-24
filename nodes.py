@@ -21,6 +21,10 @@ class STARVSRNode:
             "required": {
                 "images": ("IMAGE",),
                 "model": (["Light Degradation", "Heavy Degradation"],),
+                "precision": (
+                    ["fp16", "fp8", "nf4"],
+                    {"default": "fp16"},
+                ),
                 "prompt": ("STRING", {"default": "a good video", "multiline": True}),
                 "upscale": ("INT", {"default": 4, "min": 2, "max": 4, "step": 1}),
                 "max_chunk_len": (
@@ -51,10 +55,15 @@ class STARVSRNode:
     def __init__(self):
         self.model = None
         self.current_model_type = None
+        self.current_precision = None
 
-    def load_model(self, model_type):
-        """Load the appropriate model based on degradation type"""
-        if self.model is not None and self.current_model_type == model_type:
+    def load_model(self, model_type, precision="fp16"):
+        """Load the appropriate model based on degradation type and precision"""
+        if (
+            self.model is not None
+            and self.current_model_type == model_type
+            and self.current_precision == precision
+        ):
             return self.model
 
         # Map model type to Hugging Face repo files
@@ -98,8 +107,12 @@ class STARVSRNode:
 
         model_cfg = EasyDict(__name__="model_cfg")
         model_cfg.model_path = model_path
-        self.model = VideoToVideo_sr(model_cfg)
+
+        # Pass precision parameter to VideoToVideo_sr
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = VideoToVideo_sr(model_cfg, device=device, precision=precision)
         self.current_model_type = model_type
+        self.current_precision = precision
 
         return self.model
 
@@ -107,6 +120,7 @@ class STARVSRNode:
         self,
         images,
         model,
+        precision,
         prompt,
         upscale,
         max_chunk_len,
@@ -122,6 +136,7 @@ class STARVSRNode:
         Args:
             images: Tensor of shape [B, H, W, C] in ComfyUI format (0-1 range)
             model: Model type ("Light Degradation" or "Heavy Degradation")
+            precision: Model precision ("fp16", "fp8", or "nf4")
             prompt: Text prompt for enhancement
             upscale: Upscale factor (2, 3, or 4)
             max_chunk_len: Maximum chunk length for processing
@@ -134,7 +149,7 @@ class STARVSRNode:
             Enhanced images tensor in ComfyUI format [B, H, W, C]
         """
         # Load the appropriate model
-        model_instance = self.load_model(model)
+        model_instance = self.load_model(model, precision)
 
         # Convert ComfyUI format [B, H, W, C] to our format
         # ComfyUI images are in range [0, 1], convert to [0, 255] for preprocessing
