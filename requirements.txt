@@ -7,7 +7,7 @@ open-clip-torch
 fairscale
 torchsde
 pytorch-lightning
-diffusers["torch"]
+diffusers[torch]
 huggingface_hub
 numpy<2
 ruff
