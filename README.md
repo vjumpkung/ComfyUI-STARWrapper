@@ -17,23 +17,32 @@ This node provides an easy-to-use interface for the STAR video super-resolution 
 
 ## Installation
 
-1. Navigate to your ComfyUI custom nodes directory:
+
+1. Install xformers before installing this custom nodes please check xformers version which match with currnet pytorch at https://github.com/facebookresearch/xformers/releases .
+
+2. Navigate to your ComfyUI custom nodes directory:
 ```bash
 cd ComfyUI/custom_nodes/
 ```
 
-2. Clone this repository:
+3. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/STARVSRWrapper.git
+git clone https://github.com/vjumpkung/ComfyUI-STARWrapper.git
 ```
 
-3. Install dependencies:
+4. Install dependencies:
 ```bash
-cd STARVSRWrapper
+cd ComfyUI-STARWrapper
 pip install -r requirements.txt
 ```
 
-4. Restart ComfyUI
+5. Restart ComfyUI
+
+## Alternative Install
+
+1. Install xformers before installing this custom nodes please check xformers version which match with currnet pytorch at https://github.com/facebookresearch/xformers/releases .
+
+2. Search in ComfyUI-Manager name `ComfyUI-STARWrapper` then click install.
 
 ## Usage
 
@@ -83,10 +92,10 @@ Downloaded models are cached in `./models/STAR/` directory.
 
 This is a ComfyUI wrapper for the original STAR project:
 
-**STAR: Spatio-Temporal Adaptive Restoration**
+**STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)**
 - Original Repository: https://github.com/NJU-PCALab/STAR
 - Developed by: NJU-PCALab (Nanjing University)
-- Paper: [STAR: Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution](https://arxiv.org/abs/2402.17746)
+- Paper: [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://arxiv.org/abs/2402.17746)
 
 Please cite the original work if you use this in research:
 ```bibtex
