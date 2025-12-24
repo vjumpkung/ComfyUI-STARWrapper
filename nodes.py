@@ -26,7 +26,10 @@ class STARVSRNode:
                     {"default": "fp16"},
                 ),
                 "prompt": ("STRING", {"default": "a good video", "multiline": True}),
-                "upscale": ("INT", {"default": 4, "min": 2, "max": 4, "step": 1}),
+                "resolution": (
+                    "INT",
+                    {"default": 720, "min": 16, "max": 16384, "step": 2},
+                ),
                 "max_chunk_len": (
                     "INT",
                     {"default": 32, "min": 1, "max": 128, "step": 1},
@@ -122,7 +125,7 @@ class STARVSRNode:
         model,
         precision,
         prompt,
-        upscale,
+        resolution,
         max_chunk_len,
         cfg,
         sampler,
@@ -138,9 +141,10 @@ class STARVSRNode:
             model: Model type ("Light Degradation" or "Heavy Degradation")
             precision: Model precision ("fp16", "fp8")
             prompt: Text prompt for enhancement
-            upscale: Upscale factor (2, 3, or 4)
+            resolution: Target resolution for the shorter side (maintains aspect ratio)
             max_chunk_len: Maximum chunk length for processing
             cfg: Guidance scale
+            sampler: Sampling method ("heun" or "dpmpp_2m_sde")
             solver_mode: Solver mode ("fast" or "normal")
             steps: Number of denoising steps
             seed: Random seed for reproducibility
@@ -165,7 +169,21 @@ class STARVSRNode:
         _, _, h, w = video_data.shape
         logger.info(f"Input resolution: {(h, w)}")
 
-        target_h, target_w = h * upscale, w * upscale
+        # Calculate target resolution maintaining aspect ratio
+        # Use resolution parameter as the target for the shorter side
+        aspect_ratio = w / h
+
+        if h < w:  # Height is shorter
+            target_h = resolution
+            target_w = int(resolution * aspect_ratio)
+        else:  # Width is shorter or equal
+            target_w = resolution
+            target_h = int(resolution / aspect_ratio)
+
+        # Ensure dimensions are even (required by model)
+        target_h = target_h + (target_h % 2)
+        target_w = target_w + (target_w % 2)
+
         logger.info(f"Target resolution: {(target_h, target_w)}")
 
         # Prepare caption
