@@ -93,7 +93,7 @@ This is a ComfyUI wrapper for the original STAR project:
 **STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)**
 - Original Repository: https://github.com/NJU-PCALab/STAR
 - Developed by: NJU-PCALab (Nanjing University)
-- Paper: [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://arxiv.org/abs/2402.17746)
+- Paper: [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://arxiv.org/pdf/2501.02976)
 
 Please cite the original work if you use this in research:
 ```bibtex
