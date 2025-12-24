@@ -9,7 +9,7 @@ This node provides an easy-to-use interface for the STAR video super-resolution 
 ## Features
 
 - **Two Degradation Models**: Choose between Light and Heavy degradation models optimized for different video quality levels
-- **Flexible Upscaling**: Support for 2x, 3x, and 4x upscaling factors
+- **Flexible Upscaling**: Use target Resolution for upscaling.
 - **Text Prompting**: Guide the enhancement with text descriptions
 - **Advanced Sampling**: Multiple samplers (heun, dpmpp_2m_sde) and solver modes
 - **Automatic Model Download**: Models are automatically downloaded from Hugging Face Hub on first use
@@ -123,7 +123,7 @@ This wrapper follows the license of the original STAR project. Please refer to t
 
 ### CUDA Out of Memory
 - Reduce `max_chunk_len` to process fewer frames at once
-- Lower the upscale factor
+- Lower the target resolution.
 - Process shorter video segments
 
 ### Model Download Issues
