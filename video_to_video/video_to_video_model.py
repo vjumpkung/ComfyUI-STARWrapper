@@ -214,34 +214,74 @@ class VideoToVideo_sr:
         """
         Recursively quantize Linear layers to NF4 (4-bit NormalFloat)
         Requires bitsandbytes library
+
+        Note: Only quantizes larger Linear layers (>256 input features) to avoid
+        compatibility issues with small layers and time embeddings.
         """
         if not BITSANDBYTES_AVAILABLE:
             logger.error("bitsandbytes is not available. Cannot quantize to NF4.")
             return model.half()
 
-        for name, module in model.named_children():
+        quantized_count = 0
+        skipped_count = 0
+
+        def quantize_layer(parent_module, name, module):
+            nonlocal quantized_count, skipped_count
+
             if isinstance(module, torch.nn.Linear):
-                # Replace with 4-bit quantized version
-                quant_layer = bnb.nn.Linear4bit(
-                    module.in_features,
-                    module.out_features,
-                    bias=module.bias is not None,
-                    compute_dtype=torch.bfloat16,
-                    compress_statistics=True,
-                    quant_type="nf4",
-                )
+                # Skip small layers (like time embeddings) that may cause issues
+                # Only quantize larger layers where memory savings matter
+                if module.in_features < 256 or module.out_features < 256:
+                    skipped_count += 1
+                    return
 
-                # Copy and quantize weights
-                quant_layer.weight = bnb.nn.Params4bit(
-                    module.weight.data.to("cpu"), requires_grad=False, quant_type="nf4"
-                )
-                if module.bias is not None:
-                    quant_layer.bias = module.bias
+                try:
+                    # Create 4-bit quantized layer
+                    quant_layer = bnb.nn.Linear4bit(
+                        module.in_features,
+                        module.out_features,
+                        bias=module.bias is not None,
+                        compute_dtype=torch.bfloat16,
+                        compress_statistics=True,
+                        quant_type="nf4",
+                    )
 
-                setattr(model, name, quant_layer)
-            elif len(list(module.children())) > 0:
-                # Recursively quantize child modules
-                self._quantize_nf4(module)
+                    # Move original weights to CPU and quantize
+                    with torch.no_grad():
+                        weight_data = module.weight.data.to("cpu")
+                        quant_layer.weight = bnb.nn.Params4bit(
+                            weight_data, requires_grad=False, quant_type="nf4"
+                        )
+
+                        if module.bias is not None:
+                            quant_layer.bias = torch.nn.Parameter(
+                                module.bias.data.clone()
+                            )
+
+                    # Replace the layer
+                    setattr(parent_module, name, quant_layer)
+                    quantized_count += 1
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to quantize layer {name}: {e}. Keeping as FP16."
+                    )
+                    skipped_count += 1
+
+            # Recursively process child modules
+            for child_name, child_module in list(module.named_children()):
+                quantize_layer(module, child_name, child_module)
+
+        # Start quantization from the root
+        for name, module in list(model.named_children()):
+            quantize_layer(model, name, module)
+
+        logger.info(
+            f"NF4 Quantization: {quantized_count} layers quantized, {skipped_count} layers kept in FP16"
+        )
+
+        # Convert non-quantized layers to FP16
+        model = model.half()
 
         return model
 
