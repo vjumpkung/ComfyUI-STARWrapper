@@ -39,6 +39,15 @@ def get_pytorch_version():
         return None
 
 
+def check_xformers():
+    try:
+        import xformers
+
+        return True
+    except ImportError:
+        return False
+
+
 def get_pytorch_cuda_version():
     """Extract CUDA version from PyTorch."""
     try:
@@ -127,6 +136,11 @@ def main():
 
     # Step 2: Check xformers compatibility
     print("\n[2/3] Checking xformers compatibility...")
+
+    if check_xformers():
+        print("xformers exists skip installation")
+        return 0
+
     pytorch_version = get_pytorch_version()
     cuda_version = get_pytorch_cuda_version()
 

@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-starwrapper"
 description = "A ComfyUI custom node wrapper for [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://github.com/NJU-PCALab/STAR), enabling high-quality video upscaling with AI-powered super-resolution."
-version = "0.1.3"
+version = "0.1.4"
 license = {file = "LICENSE"} 
 classifiers = [
     # For OS-independent nodes (works on all operating systems)
