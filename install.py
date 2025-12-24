@@ -157,49 +157,6 @@ def main():
         print("PyTorch not found. Skipping xformers installation.")
         print("Please install PyTorch first, then install xformers manually.")
 
-    # Step 3: Install requirements from requirements.txt
-    print("\n[3/3] Installing requirements from requirements.txt...")
-    requirements_file = Path(__file__).parent / "requirements.txt"
-
-    if not requirements_file.exists():
-        print(f"Error: requirements.txt not found at {requirements_file}")
-        return 1
-
-    # Read requirements and filter out xformers if present
-    with open(requirements_file, "r") as f:
-        requirements = [
-            line.strip() for line in f if line.strip() and not line.startswith("#")
-        ]
-
-    # Filter out xformers since we handle it separately
-    requirements = [
-        req for req in requirements if not req.lower().startswith("xformers")
-    ]
-
-    # Install each requirement
-    failed_packages = []
-    for requirement in requirements:
-        success = install_package(package_manager, requirement)
-        if not success:
-            failed_packages.append(requirement)
-
-    print("\n" + "=" * 60)
-    print("Installation Summary")
-    print("=" * 60)
-
-    if failed_packages:
-        print(f"\n⚠️  Some packages failed to install:")
-        for pkg in failed_packages:
-            print(f"  - {pkg}")
-        print("\nPlease install them manually.")
-        return 1
-    else:
-        print("\n✅ All requirements installed successfully!")
-
-    if not pytorch_version or not xformers_version:
-        print("\n⚠️  Note: xformers needs to be installed manually.")
-        print("Please follow the instructions above.")
-
     return 0
 
 
