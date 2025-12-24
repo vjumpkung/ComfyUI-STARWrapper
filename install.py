@@ -4,9 +4,9 @@ Installation script for STARVSRWrapper.
 Checks for uv/pip, matches xformers with PyTorch version, and installs requirements.
 """
 
-import sys
-import subprocess
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 

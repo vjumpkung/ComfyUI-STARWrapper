@@ -1,4 +1,4 @@
-# STAR Video Super Resolution - ComfyUI Node
+# ComfyUI Wrapper nodes for STAR Video Super-Resolution
 
 A ComfyUI custom node wrapper for [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://github.com/NJU-PCALab/STAR), enabling high-quality video upscaling with AI-powered super-resolution.
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 3. Configure the parameters:
    - **Model**: Choose "Light Degradation" or "Heavy Degradation"
    - **Prompt**: Describe the desired output (e.g., "a high quality video")
-   - **Upscale**: Select upscaling factor (2-4x)
+   - **Resolution**: Target Resolution (720p, 1080p, 2160p, ...)
    - **Steps**: Number of denoising steps (15-50 recommended)
    - **CFG**: Guidance scale (7.5 default)
    - **Sampler**: Choose sampling method
@@ -62,7 +62,7 @@ pip install -r requirements.txt
 | ------------- | ----------------------------- | ----------------- | ----------------- |
 | model         | Degradation type              | Light Degradation | Light/Heavy       |
 | prompt        | Text guidance for enhancement | "a good video"    | -                 |
-| upscale       | Upscaling factor              | 4                 | 2-4               |
+| resolution    | Target Resolution             | 720               | 16-16384          |
 | max_chunk_len | Maximum frames per chunk      | 32                | 1-128             |
 | cfg           | Guidance scale                | 7.5               | 0.0-20.0          |
 | sampler       | Sampling method               | dpmpp_2m_sde      | heun/dpmpp_2m_sde |

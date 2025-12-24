@@ -21,8 +21,15 @@ class STARVSRNode:
             "required": {
                 "images": ("IMAGE",),
                 "model": (["Light Degradation", "Heavy Degradation"],),
+                "precision": (
+                    ["fp16", "fp8"],
+                    {"default": "fp16"},
+                ),
                 "prompt": ("STRING", {"default": "a good video", "multiline": True}),
-                "upscale": ("INT", {"default": 4, "min": 2, "max": 4, "step": 1}),
+                "resolution": (
+                    "INT",
+                    {"default": 720, "min": 16, "max": 16384, "step": 2},
+                ),
                 "max_chunk_len": (
                     "INT",
                     {"default": 32, "min": 1, "max": 128, "step": 1},
@@ -51,10 +58,15 @@ class STARVSRNode:
     def __init__(self):
         self.model = None
         self.current_model_type = None
+        self.current_precision = None
 
-    def load_model(self, model_type):
-        """Load the appropriate model based on degradation type"""
-        if self.model is not None and self.current_model_type == model_type:
+    def load_model(self, model_type, precision="fp16"):
+        """Load the appropriate model based on degradation type and precision"""
+        if (
+            self.model is not None
+            and self.current_model_type == model_type
+            and self.current_precision == precision
+        ):
             return self.model
 
         # Map model type to Hugging Face repo files
@@ -62,12 +74,12 @@ class STARVSRNode:
             "Light Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/light_deg.pt",
-                "local_path": "./models/STAR/light_degradation.pt",
+                "local_path": "./models/STAR/I2VGen-XL-based/light_deg.pt",
             },
             "Heavy Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/heavy_deg.pt",
-                "local_path": "./models/STAR/heavy_degradation.pt",
+                "local_path": "./models/STAR/I2VGen-XL-based/heavy_deg.pt",
             },
         }
 
@@ -98,8 +110,12 @@ class STARVSRNode:
 
         model_cfg = EasyDict(__name__="model_cfg")
         model_cfg.model_path = model_path
-        self.model = VideoToVideo_sr(model_cfg)
+
+        # Pass precision parameter to VideoToVideo_sr
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = VideoToVideo_sr(model_cfg, device=device, precision=precision)
         self.current_model_type = model_type
+        self.current_precision = precision
 
         return self.model
 
@@ -107,8 +123,9 @@ class STARVSRNode:
         self,
         images,
         model,
+        precision,
         prompt,
-        upscale,
+        resolution,
         max_chunk_len,
         cfg,
         sampler,
@@ -122,10 +139,12 @@ class STARVSRNode:
         Args:
             images: Tensor of shape [B, H, W, C] in ComfyUI format (0-1 range)
             model: Model type ("Light Degradation" or "Heavy Degradation")
+            precision: Model precision ("fp16", "fp8")
             prompt: Text prompt for enhancement
-            upscale: Upscale factor (2, 3, or 4)
+            resolution: Target resolution for the shorter side (maintains aspect ratio)
             max_chunk_len: Maximum chunk length for processing
             cfg: Guidance scale
+            sampler: Sampling method ("heun" or "dpmpp_2m_sde")
             solver_mode: Solver mode ("fast" or "normal")
             steps: Number of denoising steps
             seed: Random seed for reproducibility
@@ -134,7 +153,7 @@ class STARVSRNode:
             Enhanced images tensor in ComfyUI format [B, H, W, C]
         """
         # Load the appropriate model
-        model_instance = self.load_model(model)
+        model_instance = self.load_model(model, precision)
 
         # Convert ComfyUI format [B, H, W, C] to our format
         # ComfyUI images are in range [0, 1], convert to [0, 255] for preprocessing
@@ -150,7 +169,21 @@ class STARVSRNode:
         _, _, h, w = video_data.shape
         logger.info(f"Input resolution: {(h, w)}")
 
-        target_h, target_w = h * upscale, w * upscale
+        # Calculate target resolution maintaining aspect ratio
+        # Use resolution parameter as the target for the shorter side
+        aspect_ratio = w / h
+
+        if h < w:  # Height is shorter
+            target_h = resolution
+            target_w = int(resolution * aspect_ratio)
+        else:  # Width is shorter or equal
+            target_w = resolution
+            target_h = int(resolution / aspect_ratio)
+
+        # Ensure dimensions are even (required by model)
+        target_h = target_h + (target_h % 2)
+        target_w = target_w + (target_w % 2)
+
         logger.info(f"Target resolution: {(target_h, target_w)}")
 
         # Prepare caption

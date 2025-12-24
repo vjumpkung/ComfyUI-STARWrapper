@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 import random
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 import torch
 import torch.nn.functional as F
@@ -17,9 +17,15 @@ logger = get_logger()
 
 
 class VideoToVideo_sr:
-    def __init__(self, opt, device=torch.device(f"cuda:0")):
+    def __init__(
+        self,
+        opt,
+        device=torch.device(f"cuda:0"),
+        precision: Literal["fp16", "fp8", "nf4"] = "fp16",
+    ):
         self.opt = opt
         self.device = device  # torch.device(f'cuda:0')
+        self.precision = precision
 
         # text_encoder
         text_encoder = FrozenOpenCLIPEmbedder(
@@ -40,7 +46,14 @@ class VideoToVideo_sr:
             load_dict = load_dict["state_dict"]
         ret = generator.load_state_dict(load_dict, strict=False)
 
-        self.generator = generator.half()
+        # Apply quantization based on precision parameter
+        if self.precision == "fp8":
+            logger.info("Quantizing model to FP8")
+            self.generator = self._quantize_fp8(generator)
+        else:
+            logger.info("Using FP16 precision")
+            self.generator = generator.half()
+
         logger.info(
             "Load model path {}, with local status {}".format(cfg.model_path, ret)
         )
@@ -178,6 +191,27 @@ class VideoToVideo_sr:
         z = torch.cat(z_list, dim=0)
         z = rearrange(z, "(b f) c h w -> b c f h w", f=num_f)
         return z * self.vae.config.scaling_factor
+
+    def _quantize_fp8(self, model):
+        """
+        Quantize model to FP8 (requires PyTorch 2.1+ and compatible GPU)
+        Falls back to FP16 if FP8 is not supported
+        """
+        if hasattr(torch, "float8_e4m3fn"):
+            try:
+                logger.info("Converting model to FP8 (E4M3)")
+                for param in model.parameters():
+                    if param.dtype in [torch.float32, torch.float16]:
+                        param.data = param.data.to(torch.float8_e4m3fn)
+                return model
+            except Exception as e:
+                logger.warning(f"FP8 conversion failed: {e}. Falling back to FP16.")
+                return model.half()
+        else:
+            logger.warning(
+                "FP8 not supported on this PyTorch version. Falling back to FP16."
+            )
+            return model.half()
 
 
 def pad_to_fit(h, w):

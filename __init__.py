@@ -11,14 +11,8 @@ print(r"""   _____ _______       _____
  |_____/   |_/_/    \_\_|  \_\
                               """)
 
-try:
-    import xformers
-except ImportError:
-    raise ImportError(
-        "Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper"
-    )
-
-
 from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
+
+print("🎉 Loading STAR Video Super-Resolution Completed ")
