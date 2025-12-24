@@ -71,12 +71,12 @@ class STARVSRNode:
             "Light Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/light_deg.pt",
-                "local_path": "./models/STAR/light_degradation.pt",
+                "local_path": "./models/STAR/light_deg.pt",
             },
             "Heavy Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/heavy_deg.pt",
-                "local_path": "./models/STAR/heavy_degradation.pt",
+                "local_path": "./models/STAR/heavy_deg.pt",
             },
         }
 
