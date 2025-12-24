@@ -3,7 +3,7 @@ STAR Video Super Resolution for ComfyUI
 A wrapper for STAR VSR model that provides video upscaling capabilities.
 """
 
-print("""   _____ _______       _____  
+print(r"""   _____ _______       _____  
   / ____|__   __|/\   |  __ \ 
  | (___    | |  /  \  | |__) |
   \___ \   | | / /\ \ |  _  / 
@@ -14,9 +14,6 @@ print("""   _____ _______       _____
 try:
     import xformers
 except ImportError:
-    print(
-        "Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper"
-    )
     raise ImportError(
         "Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper"
     )

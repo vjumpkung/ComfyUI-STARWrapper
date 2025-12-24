@@ -80,6 +80,37 @@ pip install -r requirements.txt
 - ComfyUI
 - See [requirements.txt](requirements.txt) for full dependencies
 
+## Troubleshooting
+
+```
+   _____ _______       _____
+  / ____|__   __|/\   |  __ \
+ | (___    | |  /  \  | |__) |
+  \___ \   | | / /\ \ |  _  /
+  ____) |  | |/ ____ \| | \ \
+ |_____/   |_/_/    \_\_|  \_|
+Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper
+Traceback (most recent call last):
+  File "D:\ComfyUI\custom_nodes\ComfyUI-STARWrapper\__init__.py", line 15, in <module>
+    import xformers
+ModuleNotFoundError: No module named 'xformers'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\ComfyUI\nodes.py", line 2149, in load_custom_node
+    module_spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "D:\ComfyUI\custom_nodes\ComfyUI-STARWrapper\__init__.py", line 20, in <module>
+    raise ImportError(
+ImportError: Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper
+
+Cannot import D:\ComfyUI\custom_nodes\ComfyUI-STARWrapper module for custom nodes: Please install xformers manually version before use this custom nodes see instruction at https://github.com/vjumpkung/ComfyUI-STARWrapper
+```
+
+If you see this error please install xformers manually.
+
 ## Models
 
 Models are automatically downloaded from the [SherryX/STAR](https://huggingface.co/SherryX/STAR) Hugging Face repository:
