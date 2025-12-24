@@ -22,7 +22,7 @@ class STARVSRNode:
                 "images": ("IMAGE",),
                 "model": (["Light Degradation", "Heavy Degradation"],),
                 "precision": (
-                    ["fp16", "fp8", "nf4"],
+                    ["fp16", "fp8"],
                     {"default": "fp16"},
                 ),
                 "prompt": ("STRING", {"default": "a good video", "multiline": True}),
@@ -71,12 +71,12 @@ class STARVSRNode:
             "Light Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/light_deg.pt",
-                "local_path": "./models/STAR/light_deg.pt",
+                "local_path": "./models/STAR/I2VGen-XL-based/light_deg.pt",
             },
             "Heavy Degradation": {
                 "repo_id": "SherryX/STAR",
                 "filename": "I2VGen-XL-based/heavy_deg.pt",
-                "local_path": "./models/STAR/heavy_deg.pt",
+                "local_path": "./models/STAR/I2VGen-XL-based/heavy_deg.pt",
             },
         }
 
@@ -136,7 +136,7 @@ class STARVSRNode:
         Args:
             images: Tensor of shape [B, H, W, C] in ComfyUI format (0-1 range)
             model: Model type ("Light Degradation" or "Heavy Degradation")
-            precision: Model precision ("fp16", "fp8", or "nf4")
+            precision: Model precision ("fp16", "fp8")
             prompt: Text prompt for enhancement
             upscale: Upscale factor (2, 3, or 4)
             max_chunk_len: Maximum chunk length for processing

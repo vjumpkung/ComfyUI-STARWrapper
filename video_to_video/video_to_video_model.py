@@ -15,17 +15,6 @@ from ..video_to_video.utils.logger import get_logger
 
 logger = get_logger()
 
-# Try to import bitsandbytes for quantization
-try:
-    import bitsandbytes as bnb
-
-    BITSANDBYTES_AVAILABLE = True
-except ImportError:
-    BITSANDBYTES_AVAILABLE = False
-    logger.warning(
-        "bitsandbytes not available. NF4 quantization will not be supported."
-    )
-
 
 class VideoToVideo_sr:
     def __init__(
@@ -58,14 +47,7 @@ class VideoToVideo_sr:
         ret = generator.load_state_dict(load_dict, strict=False)
 
         # Apply quantization based on precision parameter
-        if self.precision == "nf4":
-            if not BITSANDBYTES_AVAILABLE:
-                logger.warning("bitsandbytes not available. Falling back to FP16.")
-                self.generator = generator.half()
-            else:
-                logger.info("Quantizing model to NF4 (4-bit)")
-                self.generator = self._quantize_nf4(generator)
-        elif self.precision == "fp8":
+        if self.precision == "fp8":
             logger.info("Quantizing model to FP8")
             self.generator = self._quantize_fp8(generator)
         else:
@@ -209,85 +191,6 @@ class VideoToVideo_sr:
         z = torch.cat(z_list, dim=0)
         z = rearrange(z, "(b f) c h w -> b c f h w", f=num_f)
         return z * self.vae.config.scaling_factor
-
-    def _quantize_nf4(self, model):
-        """
-        Recursively quantize Linear layers to NF4 (4-bit NormalFloat)
-        Requires bitsandbytes library
-
-        Note: Only quantizes larger Linear layers (>256 input features) to avoid
-        compatibility issues with small layers and time embeddings.
-        """
-        if not BITSANDBYTES_AVAILABLE:
-            logger.error("bitsandbytes is not available. Cannot quantize to NF4.")
-            return model.half()
-
-        quantized_count = 0
-        skipped_count = 0
-
-        def quantize_layer(parent_module, name, module):
-            nonlocal quantized_count, skipped_count
-
-            if isinstance(module, torch.nn.Linear):
-                # Skip small layers (like time embeddings) that may cause issues
-                # Only quantize larger layers where memory savings matter
-                if module.in_features < 256 or module.out_features < 256:
-                    skipped_count += 1
-                    return
-
-                try:
-                    # Create 4-bit quantized layer
-                    quant_layer = bnb.nn.Linear4bit(
-                        module.in_features,
-                        module.out_features,
-                        bias=module.bias is not None,
-                        compute_dtype=torch.bfloat16,
-                        compress_statistics=True,
-                        quant_type="nf4",
-                    )
-
-                    # Move original weights to CPU and quantize
-                    with torch.no_grad():
-                        weight_data = module.weight.data.to("cpu")
-                        quant_layer.weight = bnb.nn.Params4bit(
-                            weight_data, requires_grad=False, quant_type="nf4"
-                        )
-
-                        if module.bias is not None:
-                            quant_layer.bias = torch.nn.Parameter(
-                                module.bias.data.clone()
-                            )
-
-                    # Move quantized layer to device BEFORE replacing
-                    # This initializes the quantization state properly
-                    quant_layer = quant_layer.to(self.device)
-
-                    # Replace the layer
-                    setattr(parent_module, name, quant_layer)
-                    quantized_count += 1
-
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to quantize layer {name}: {e}. Keeping as FP16."
-                    )
-                    skipped_count += 1
-
-            # Recursively process child modules
-            for child_name, child_module in list(module.named_children()):
-                quantize_layer(module, child_name, child_module)
-
-        # Start quantization from the root
-        for name, module in list(model.named_children()):
-            quantize_layer(model, name, module)
-
-        logger.info(
-            f"NF4 Quantization: {quantized_count} layers quantized, {skipped_count} layers kept in FP16"
-        )
-
-        # Convert non-quantized layers to FP16
-        model = model.half()
-
-        return model
 
     def _quantize_fp8(self, model):
         """
