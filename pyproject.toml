@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-starwrapper"
 description = "A ComfyUI custom node wrapper for [STAR (Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution)](https://github.com/NJU-PCALab/STAR), enabling high-quality video upscaling with AI-powered super-resolution."
-version = "0.2.0"
+version = "0.2.1"
 license = {file = "LICENSE"} 
 classifiers = [
     # For OS-independent nodes (works on all operating systems)
@@ -10,7 +10,7 @@ classifiers = [
     "Environment :: GPU :: NVIDIA CUDA",    # NVIDIA CUDA support
 ]
 
-dependencies = ["accelerate", "av", "opencv-python", "easydict", "einops", "open-clip-torch", "fairscale", "torchsde", "pytorch-lightning", "diffusers[torch]", "huggingface_hub", "numpy<2", "ruff", "transformers"]
+dependencies = ["accelerate", "av", "opencv-python", "easydict", "einops", "open-clip-torch==2.20.0", "fairscale", "torchsde", "pytorch-lightning", "diffusers[torch]", "huggingface_hub", "numpy<2", "ruff", "transformers"]
 
 [project.urls]
 Repository = "https://github.com/vjumpkung/ComfyUI-STARWrapper"
