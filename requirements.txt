@@ -3,7 +3,7 @@ av
 opencv-python
 easydict
 einops
-open-clip-torch
+open-clip-torch==2.20.0
 fairscale
 torchsde
 pytorch-lightning
