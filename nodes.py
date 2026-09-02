@@ -48,7 +48,25 @@ class STARVSRNode:
                 ),
                 "steps": ("INT", {"default": 15, "min": 1, "max": 100, "step": 1}),
                 "seed": ("INT", {"default": 42, "min": 0, "max": 0xFFFFFFFFFFFFFFFF}),
-            }
+            },
+            "optional": {
+                "vae_decode_chunk": (
+                    "INT",
+                    {
+                        "default": 1,
+                        "min": 1,
+                        "max": 8,
+                        "step": 1,
+                        "tooltip": (
+                            "Frames decoded per VAE pass. This is the largest single "
+                            "VRAM allocation in the pipeline (roughly 3 GiB per frame "
+                            "at 720p), so 1 keeps peak usage lowest. Raise it only if "
+                            "you have headroom and want more temporal mixing across "
+                            "decoded frames."
+                        ),
+                    },
+                ),
+            },
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -132,6 +150,7 @@ class STARVSRNode:
         solver_mode,
         steps,
         seed,
+        vae_decode_chunk=1,
     ):
         """
         Enhance video frames using STAR model
@@ -148,6 +167,7 @@ class STARVSRNode:
             solver_mode: Solver mode ("fast" or "normal")
             steps: Number of denoising steps
             seed: Random seed for reproducibility
+            vae_decode_chunk: Frames per VAE decode pass (peak VRAM driver)
 
         Returns:
             Enhanced images tensor in ComfyUI format [B, H, W, C]
@@ -213,6 +233,7 @@ class STARVSRNode:
                 solver_mode=solver_mode,
                 guide_scale=cfg,
                 max_chunk_len=max_chunk_len,
+                vae_decode_chunk=vae_decode_chunk,
             )
 
         # Convert output to video frames

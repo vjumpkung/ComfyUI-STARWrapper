@@ -7,8 +7,6 @@ from abc import abstractmethod
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import xformers
-import xformers.ops
 from einops import rearrange, repeat
 from fairscale.nn.checkpoint import checkpoint_wrapper
 from timm.models.vision_transformer import Mlp
@@ -144,20 +142,27 @@ def prob_mask_like(shape, prob, device):
 
 
 class MemoryEfficientCrossAttention(nn.Module):
+    """Cross/self attention backed by torch's scaled_dot_product_attention.
+
+    SDPA dispatches to the same fused CUTLASS memory-efficient kernel that
+    xformers provides (and to FlashAttention where the torch build ships it), so
+    no external attention library is needed. Keeping q/k/v in their natural
+    ``[b, heads, n, dim_head]`` layout also avoids collapsing heads into the
+    batch dimension, which is what forced the old manual ``max_bs`` chunking.
+    """
+
     def __init__(
         self,
         query_dim,
         context_dim=None,
         heads=8,
         dim_head=64,
-        max_bs=16384,
         dropout=0.0,
     ):
         super().__init__()
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
 
-        self.max_bs = max_bs
         self.heads = heads
         self.dim_head = dim_head
 
@@ -167,49 +172,27 @@ class MemoryEfficientCrossAttention(nn.Module):
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, query_dim), nn.Dropout(dropout)
         )
-        self.attention_op: Optional[Any] = None
 
     def forward(self, x, context=None, mask=None):
+        if exists(mask):
+            raise NotImplementedError
+
         q = self.to_q(x)
         context = default(context, x)
         k = self.to_k(context)
         v = self.to_v(context)
 
         b, _, _ = q.shape
+        # [b, n, heads * dim_head] -> [b, heads, n, dim_head]. The last dim stays
+        # stride-1, so this is a view and the fused kernels accept it as-is.
         q, k, v = map(
-            lambda t: t.unsqueeze(3)
-            .reshape(b, t.shape[1], self.heads, self.dim_head)
-            .permute(0, 2, 1, 3)
-            .reshape(b * self.heads, t.shape[1], self.dim_head)
-            .contiguous(),
+            lambda t: t.view(b, t.shape[1], self.heads, self.dim_head).transpose(1, 2),
             (q, k, v),
         )
 
-        # actually compute the attention, what we cannot get enough of.
-        if q.shape[0] > self.max_bs:
-            q_list = torch.chunk(q, q.shape[0] // self.max_bs, dim=0)
-            k_list = torch.chunk(k, k.shape[0] // self.max_bs, dim=0)
-            v_list = torch.chunk(v, v.shape[0] // self.max_bs, dim=0)
-            out_list = []
-            for q_1, k_1, v_1 in zip(q_list, k_list, v_list):
-                out = xformers.ops.memory_efficient_attention(
-                    q_1, k_1, v_1, attn_bias=None, op=self.attention_op
-                )
-                out_list.append(out)
-            out = torch.cat(out_list, dim=0)
-        else:
-            out = xformers.ops.memory_efficient_attention(
-                q, k, v, attn_bias=None, op=self.attention_op
-            )
+        out = F.scaled_dot_product_attention(q, k, v)
 
-        if exists(mask):
-            raise NotImplementedError
-        out = (
-            out.unsqueeze(0)
-            .reshape(b, self.heads, out.shape[1], self.dim_head)
-            .permute(0, 2, 1, 3)
-            .reshape(b, out.shape[1], self.heads * self.dim_head)
-        )
+        out = out.transpose(1, 2).reshape(b, out.shape[2], self.heads * self.dim_head)
         return self.to_out(out)
 
 
@@ -1760,8 +1743,12 @@ class Vid2VidSDUNet(nn.Module):
 
 class ControlledV2VUNet(Vid2VidSDUNet):
     def __init__(self):
-        super(ControlledV2VUNet, self).__init__()
-        self.VideoControlNet = VideoControlNet()
+        # Activation checkpointing is a training-time memory trade. fairscale's
+        # wrapper short-circuits to the plain forward whenever grad is disabled,
+        # so under torch.no_grad() inference it saves nothing while re-wrapping
+        # (and re-walking the submodule tree of) every block on every step.
+        super(ControlledV2VUNet, self).__init__(use_checkpoint=False)
+        self.VideoControlNet = VideoControlNet(use_checkpoint=False)
 
     def forward(
         self,

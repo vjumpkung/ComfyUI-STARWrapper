@@ -27,21 +27,24 @@ class VideoToVideo_sr:
         self.device = device  # torch.device(f'cuda:0')
         self.precision = precision
 
-        # text_encoder
+        # text_encoder. The ViT-H-14 text tower is 354M params (~1.3 GiB in fp32)
+        # and is only used to embed the prompts, twice per run, so it is kept on
+        # the CPU rather than occupying VRAM for the whole of sampling.
         text_encoder = FrozenOpenCLIPEmbedder(
-            device=self.device, pretrained="laion2b_s32b_b79k"
+            device=torch.device("cpu"), pretrained="laion2b_s32b_b79k"
         )
-        text_encoder.model.to(self.device)
         self.text_encoder = text_encoder
         logger.info(f"Build encoder with FrozenOpenCLIPEmbedder")
 
-        # U-Net with ControlNet
+        # U-Net with ControlNet. Loading and casting happen on the CPU so the GPU
+        # only ever sees the final low-precision weights: moving the fp32 model to
+        # the device first would peak at twice the VRAM (~7.6 GiB for this 2.0B
+        # param model) before .half() releases it.
         generator = ControlledV2VUNet()
-        generator = generator.to(self.device)
         generator.eval()
 
         cfg.model_path = opt.model_path
-        load_dict = torch.load(cfg.model_path, map_location="cpu")
+        load_dict = torch.load(cfg.model_path, map_location="cpu", weights_only=True)
         if "state_dict" in load_dict:
             load_dict = load_dict["state_dict"]
         ret = generator.load_state_dict(load_dict, strict=False)
@@ -49,10 +52,12 @@ class VideoToVideo_sr:
         # Apply quantization based on precision parameter
         if self.precision == "fp8":
             logger.info("Quantizing model to FP8")
-            self.generator = self._quantize_fp8(generator)
+            generator = self._quantize_fp8(generator)
         else:
             logger.info("Using FP16 precision")
-            self.generator = generator.half()
+            generator = generator.half()
+
+        self.generator = generator.to(self.device)
 
         logger.info(
             "Load model path {}, with local status {}".format(cfg.model_path, ret)
@@ -70,11 +75,14 @@ class VideoToVideo_sr:
         self.diffusion = diffusion
         logger.info("Build diffusion with GaussianDiffusion")
 
-        # Temporal VAE
+        # Temporal VAE. `variant` only selects which weight *file* to fetch, so
+        # torch_dtype is what actually keeps the VAE (and its activations, which
+        # dominate at 720p) in half precision.
         vae = AutoencoderKLTemporalDecoder.from_pretrained(
             "stabilityai/stable-video-diffusion-img2vid",
             subfolder="vae",
             variant="fp16",
+            torch_dtype=torch.float16,
         )
         vae.eval()
         vae.requires_grad_(False)
@@ -87,7 +95,7 @@ class VideoToVideo_sr:
         self.negative_prompt = cfg.negative_prompt
         self.positive_prompt = cfg.positive_prompt
 
-        negative_y = text_encoder(self.negative_prompt).detach()
+        negative_y = text_encoder(self.negative_prompt).detach().to(self.device)
         self.negative_y = negative_y
 
     def test(
@@ -99,6 +107,7 @@ class VideoToVideo_sr:
         solver_mode="fast",
         guide_scale=7.5,
         max_chunk_len=32,
+        vae_decode_chunk=1,
     ):
         video_data = input["video_data"]
         y = input["y"]
@@ -116,10 +125,13 @@ class VideoToVideo_sr:
         bs = 1
         video_data = video_data.to(self.device)
 
-        video_data_feature = self.vae_encode(video_data)
+        # autocast keeps the fp16 VAE fed with fp32 frames and halves the encoder
+        # activations, which are the peak allocation at 720p and above.
+        with torch.amp.autocast("cuda", enabled=True):
+            video_data_feature = self.vae_encode(video_data)
         torch.cuda.empty_cache()
 
-        y = self.text_encoder(y).detach()
+        y = self.text_encoder(y).detach().to(self.device)
 
         with torch.amp.autocast("cuda", enabled=True):
             t = torch.LongTensor([total_noise_levels - 1]).to(self.device)
@@ -153,7 +165,7 @@ class VideoToVideo_sr:
             torch.cuda.empty_cache()
 
             logger.info(f"sampling, finished.")
-            vid_tensor_gen = self.vae_decode_chunk(gen_vid, chunk_size=3)
+            vid_tensor_gen = self.vae_decode_chunk(gen_vid, chunk_size=vae_decode_chunk)
 
             logger.info(f"temporal vae decoding, finished.")
 
@@ -171,7 +183,7 @@ class VideoToVideo_sr:
             z / self.vae.config.scaling_factor, num_frames=num_f
         ).sample
 
-    def vae_decode_chunk(self, z, chunk_size=3):
+    def vae_decode_chunk(self, z, chunk_size=1):
         z = rearrange(z, "b c f h w -> (b f) c h w")
         video = []
         for ind in range(0, z.shape[0], chunk_size):
