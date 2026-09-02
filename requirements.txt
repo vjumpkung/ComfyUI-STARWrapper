@@ -9,6 +9,6 @@ torchsde
 pytorch-lightning
 diffusers[torch]
 huggingface_hub
-numpy<2
+numpy<2.3
 ruff
 transformers

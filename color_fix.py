@@ -6,13 +6,11 @@
 
 import torch
 from einops import rearrange
-from PIL import Image
 from torch import Tensor
 from torch.nn import functional as F
-from torchvision.transforms import ToPILImage, ToTensor
 
 
-def adain_color_fix(target: Image, source: Image):
+def adain_color_fix(target: Tensor, source: Tensor) -> Tensor:
     # Convert images to tensors
     target = rearrange(target, "T H W C -> T C H W") / 255
     source = (source + 1) / 2

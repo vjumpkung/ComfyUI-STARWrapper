@@ -10,9 +10,11 @@ STARVSRWrapper is a ComfyUI custom node that wraps the STAR (Spatio-Temporal Ada
 
 ### Core Components
 
-1. **[nodes.py](nodes.py)** - Main ComfyUI node implementation (`STARVSRNode`)
-   - Implements ComfyUI's node interface pattern (INPUT_TYPES, RETURN_TYPES, FUNCTION)
-   - Handles model loading from Hugging Face Hub or local cache
+1. **[nodes.py](nodes.py)** - ComfyUI V3 node implementations
+   - Uses `io.ComfyNode`, `define_schema`, classmethod `execute`, and `io.NodeOutput`
+   - Provides modular model-loader, video-preparation, text-encoding, sampling, VAE-decoding, and color-fix nodes
+   - Retains `STARVSRNode` as a deprecated V3 all-in-one compatibility node for existing workflows
+   - Handles model loading from Hugging Face Hub or ComfyUI's `models/STAR/` cache
    - Converts between ComfyUI image format [B, H, W, C] (0-1 range) and STAR's internal format
    - Two model variants: "Light Degradation" and "Heavy Degradation" downloaded from HF repo `SherryX/STAR`
 
@@ -37,20 +39,14 @@ STARVSRWrapper is a ComfyUI custom node that wraps the STAR (Spatio-Temporal Ada
 
 ```
 ComfyUI Images [B,H,W,C] (0-1)
-    ↓ (convert to BGR, scale to 0-255)
-Input frames (numpy arrays)
-    ↓ preprocess()
-Normalized tensors (mean=0.5, std=0.5)
-    ↓ VAE encode
-Latent space features
-    ↓ Diffusion sampling (with ControlNet guidance)
-Denoised latents
-    ↓ VAE decode
-Output tensors
-    ↓ tensor2vid() + adain_color_fix()
-Video frames [T,H,W,C] (0-255)
-    ↓ (normalize to 0-1)
-ComfyUI Images [B,H,W,C] (0-1)
+    ↓ STAR Prepare Video (CPU, normalized BCHW)
+Prepared STAR video
+    ↓ STAR Sample (VAE encode + diffusion)
+Sampled STAR latent (CPU)
+    ↓ STAR VAE Decode
+Raw ComfyUI Images [B,H,W,C] (0-1)
+    ↓ STAR Color Fix + original images
+Color-corrected ComfyUI Images [B,H,W,C] (0-1)
 ```
 
 ### Model Components
@@ -99,4 +95,4 @@ This is a ComfyUI custom node that should be placed in ComfyUI's `custom_nodes/`
 - Inputs: IMAGE tensor, model type, prompt, upscale factor, sampling parameters
 - Outputs: Upscaled IMAGE tensor
 
-The `NODE_CLASS_MAPPINGS` and `NODE_DISPLAY_NAME_MAPPINGS` in [__init__.py](__init__.py) register the node with ComfyUI.
+The `ComfyExtension` and async `comfy_entrypoint` in [__init__.py](__init__.py) register all V3 nodes with ComfyUI.

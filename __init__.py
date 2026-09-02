@@ -1,18 +1,17 @@
-"""
-STAR Video Super Resolution for ComfyUI
-A wrapper for STAR VSR model that provides video upscaling capabilities.
-"""
+"""STAR Video Super Resolution nodes for ComfyUI."""
 
-print(r"""   _____ _______       _____  
-  / ____|__   __|/\   |  __ \ 
- | (___    | |  /  \  | |__) |
-  \___ \   | | / /\ \ |  _  / 
-  ____) |  | |/ ____ \| | \ \ 
- |_____/   |_/_/    \_\_|  \_\
-                              """)
+from comfy_api.latest import ComfyExtension, io
 
-from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
+from .nodes import STAR_NODE_CLASSES
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
 
-print("🎉 Loading STAR Video Super-Resolution Completed ")
+class STARVSRWrapperExtension(ComfyExtension):
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return STAR_NODE_CLASSES
+
+
+async def comfy_entrypoint() -> STARVSRWrapperExtension:
+    return STARVSRWrapperExtension()
+
+
+__all__ = ["comfy_entrypoint"]

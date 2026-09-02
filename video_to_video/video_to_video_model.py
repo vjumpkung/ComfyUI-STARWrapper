@@ -1,15 +1,14 @@
-import os
-import os.path as osp
-import random
 from typing import Any, Dict, Literal
 
 import torch
 import torch.nn.functional as F
 from diffusers import AutoencoderKLTemporalDecoder
+from einops import rearrange
 
 from ..video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion
 from ..video_to_video.diffusion.schedules_sdedit import noise_schedule
-from ..video_to_video.modules import *
+from ..video_to_video.modules.embedder import FrozenOpenCLIPEmbedder
+from ..video_to_video.modules.unet_v2v import ControlledV2VUNet
 from ..video_to_video.utils.config import cfg
 from ..video_to_video.utils.logger import get_logger
 
@@ -20,7 +19,7 @@ class VideoToVideo_sr:
     def __init__(
         self,
         opt,
-        device=torch.device(f"cuda:0"),
+        device=torch.device("cuda:0"),
         precision: Literal["fp16", "fp8", "nf4"] = "fp16",
     ):
         self.opt = opt
@@ -34,7 +33,7 @@ class VideoToVideo_sr:
             device=torch.device("cpu"), pretrained="laion2b_s32b_b79k"
         )
         self.text_encoder = text_encoder
-        logger.info(f"Build encoder with FrozenOpenCLIPEmbedder")
+        logger.info("Build encoder with FrozenOpenCLIPEmbedder")
 
         # U-Net with ControlNet. Loading and casting happen on the CPU so the GPU
         # only ever sees the final low-precision weights: moving the fp32 model to
@@ -43,8 +42,7 @@ class VideoToVideo_sr:
         generator = ControlledV2VUNet()
         generator.eval()
 
-        cfg.model_path = opt.model_path
-        load_dict = torch.load(cfg.model_path, map_location="cpu", weights_only=True)
+        load_dict = torch.load(opt.model_path, map_location="cpu", weights_only=True)
         if "state_dict" in load_dict:
             load_dict = load_dict["state_dict"]
         ret = generator.load_state_dict(load_dict, strict=False)
@@ -60,7 +58,7 @@ class VideoToVideo_sr:
         self.generator = generator.to(self.device)
 
         logger.info(
-            "Load model path {}, with local status {}".format(cfg.model_path, ret)
+            "Load model path {}, with local status {}".format(opt.model_path, ret)
         )
 
         # Noise scheduler
@@ -90,28 +88,40 @@ class VideoToVideo_sr:
         self.vae = vae
         logger.info("Build Temporal VAE")
 
-        torch.cuda.empty_cache()
+        self._empty_cuda_cache()
 
         self.negative_prompt = cfg.negative_prompt
         self.positive_prompt = cfg.positive_prompt
 
-        negative_y = text_encoder(self.negative_prompt).detach().to(self.device)
-        self.negative_y = negative_y
+        # Keep reusable conditioning on the CPU. It is small and only needs to be
+        # on the accelerator while the sampler is running.
+        self.negative_y = text_encoder(self.negative_prompt).detach().cpu()
 
-    def test(
+    @torch.no_grad()
+    def encode_prompt(self, prompt: str) -> torch.Tensor:
+        """Encode prompt text into cacheable, CPU-resident conditioning."""
+        caption = prompt or self.positive_prompt
+        return self.text_encoder(caption).detach().cpu()
+
+    @torch.no_grad()
+    def sample_latent(
         self,
         input: Dict[str, Any],
+        conditioning: torch.Tensor,
         total_noise_levels=1000,
         steps=50,
         solver="dpmpp_2m_sde",
         solver_mode="fast",
         guide_scale=7.5,
         max_chunk_len=32,
-        vae_decode_chunk=1,
     ):
-        video_data = input["video_data"]
-        y = input["y"]
-        (target_h, target_w) = input["target_res"]
+        """Encode the source video and run diffusion, returning a CPU latent.
+
+        VAE decoding is intentionally separate so changing its chunk size does
+        not invalidate the expensive diffusion result in ComfyUI's node cache.
+        """
+        video_data = input["video_data"].to(self.device)
+        target_h, target_w = input["target_res"]
 
         video_data = F.interpolate(video_data, [target_h, target_w], mode="bilinear")
 
@@ -120,27 +130,27 @@ class VideoToVideo_sr:
 
         padding = pad_to_fit(h, w)
         video_data = F.pad(video_data, padding, "constant", 1)
+        video_data = video_data.unsqueeze(0).to(self.device)
 
-        video_data = video_data.unsqueeze(0)
-        bs = 1
-        video_data = video_data.to(self.device)
-
-        # autocast keeps the fp16 VAE fed with fp32 frames and halves the encoder
-        # activations, which are the peak allocation at 720p and above.
-        with torch.amp.autocast("cuda", enabled=True):
+        with self._autocast():
             video_data_feature = self.vae_encode(video_data)
-        torch.cuda.empty_cache()
+        self._empty_cuda_cache()
 
-        y = self.text_encoder(y).detach().to(self.device)
+        y = conditioning.detach().to(self.device)
 
-        with torch.amp.autocast("cuda", enabled=True):
-            t = torch.LongTensor([total_noise_levels - 1]).to(self.device)
+        with self._autocast():
+            t = torch.tensor(
+                [total_noise_levels - 1], dtype=torch.long, device=self.device
+            )
             noised_lr = self.diffusion.diffuse(video_data_feature, t)
 
-            model_kwargs = [{"y": y}, {"y": self.negative_y}]
-            model_kwargs.append({"hint": video_data_feature})
+            model_kwargs = [
+                {"y": y},
+                {"y": self.negative_y.to(self.device)},
+                {"hint": video_data_feature},
+            ]
 
-            torch.cuda.empty_cache()
+            self._empty_cuda_cache()
             chunk_inds = (
                 make_chunks(frames_num, interp_f_num=0, max_chunk_len=max_chunk_len)
                 if frames_num > max_chunk_len
@@ -162,21 +172,63 @@ class VideoToVideo_sr:
                 discretization="trailing",
                 chunk_inds=chunk_inds,
             )
-            torch.cuda.empty_cache()
 
-            logger.info(f"sampling, finished.")
-            vid_tensor_gen = self.vae_decode_chunk(gen_vid, chunk_size=vae_decode_chunk)
+        logger.info("sampling, finished.")
+        latent = gen_vid.detach().cpu()
+        del gen_vid, noised_lr, video_data_feature, video_data, model_kwargs, y, t
+        self._empty_cuda_cache()
+        return latent, padding, (h, w), 1
 
-            logger.info(f"temporal vae decoding, finished.")
+    @torch.no_grad()
+    def decode_latent(
+        self,
+        latent: torch.Tensor,
+        padding,
+        output_size,
+        batch_size=1,
+        chunk_size=1,
+    ) -> torch.Tensor:
+        """Decode a sampled latent and crop padding, returning CPU BCFHW video."""
+        with self._autocast():
+            vid_tensor_gen = self.vae_decode_chunk(latent, chunk_size=chunk_size)
 
-        w1, w2, h1, h2 = padding
+        logger.info("temporal vae decoding, finished.")
+        w1, _w2, h1, _h2 = padding
+        h, w = output_size
         vid_tensor_gen = vid_tensor_gen[:, :, h1 : h + h1, w1 : w + w1]
+        gen_video = rearrange(vid_tensor_gen, "(b f) c h w -> b c f h w", b=batch_size)
+        self._empty_cuda_cache()
+        return gen_video.to(dtype=torch.float32, device="cpu")
 
-        gen_video = rearrange(vid_tensor_gen, "(b f) c h w -> b c f h w", b=bs)
-
-        torch.cuda.empty_cache()
-
-        return gen_video.type(torch.float32).cpu()
+    def test(
+        self,
+        input: Dict[str, Any],
+        total_noise_levels=1000,
+        steps=50,
+        solver="dpmpp_2m_sde",
+        solver_mode="fast",
+        guide_scale=7.5,
+        max_chunk_len=32,
+        vae_decode_chunk=1,
+    ):
+        conditioning = self.encode_prompt(input["y"])
+        latent, padding, output_size, batch_size = self.sample_latent(
+            input,
+            conditioning,
+            total_noise_levels=total_noise_levels,
+            steps=steps,
+            solver=solver,
+            solver_mode=solver_mode,
+            guide_scale=guide_scale,
+            max_chunk_len=max_chunk_len,
+        )
+        return self.decode_latent(
+            latent,
+            padding,
+            output_size,
+            batch_size=batch_size,
+            chunk_size=vae_decode_chunk,
+        )
 
     def temporal_vae_decode(self, z, num_f):
         return self.vae.decode(
@@ -187,10 +239,24 @@ class VideoToVideo_sr:
         z = rearrange(z, "b c f h w -> (b f) c h w")
         video = []
         for ind in range(0, z.shape[0], chunk_size):
-            num_f = z[ind : ind + chunk_size].shape[0]
-            video.append(self.temporal_vae_decode(z[ind : ind + chunk_size], num_f))
+            latent_chunk = z[ind : ind + chunk_size].to(self.device)
+            num_f = latent_chunk.shape[0]
+            decoded = self.temporal_vae_decode(latent_chunk, num_f)
+            video.append(decoded.detach().cpu())
+            del latent_chunk, decoded
         video = torch.cat(video)
         return video
+
+    def _autocast(self):
+        return torch.amp.autocast(
+            device_type=self.device.type,
+            enabled=self.device.type == "cuda",
+        )
+
+    @staticmethod
+    def _empty_cuda_cache():
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def vae_encode(self, t, chunk_size=1):
         num_f = t.shape[1]
