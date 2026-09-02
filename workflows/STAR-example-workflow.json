@@ -1,272 +1,634 @@
 {
-  "id": "f0bce436-ca7c-453d-8f96-d287c25cf130",
+  "id": "24eea6a5-7e1c-485b-8d55-adab5d520764",
   "revision": 0,
-  "last_node_id": 7,
-  "last_link_id": 5,
+  "last_node_id": 10,
+  "last_link_id": 15,
   "nodes": [
     {
-      "id": 3,
-      "type": "VHS_LoadVideo",
+      "id": 9,
+      "type": "GetVideoComponents",
       "pos": [
-        400,
-        310
+        -165.06178827335847,
+        15.171701010100934
       ],
       "size": [
-        255.8291015625,
-        740.5813428874735
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "meta_batch",
-          "shape": 7,
-          "type": "VHS_BatchManager",
-          "link": null
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            3
-          ]
-        },
-        {
-          "name": "frame_count",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "links": null
-        },
-        {
-          "name": "video_info",
-          "type": "VHS_VIDEOINFO",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-videohelpersuite",
-        "ver": "1.7.9",
-        "Node name for S&R": "VHS_LoadVideo"
-      },
-      "widgets_values": {
-        "video": "video_00010.mp4",
-        "force_rate": 0,
-        "custom_width": 0,
-        "custom_height": 0,
-        "frame_load_cap": 0,
-        "skip_first_frames": 0,
-        "select_every_nth": 1,
-        "format": "AnimateDiff",
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "force_rate": 0,
-            "custom_width": 0,
-            "custom_height": 0,
-            "frame_load_cap": 0,
-            "skip_first_frames": 0,
-            "select_every_nth": 1,
-            "filename": "video_00010.mp4",
-            "type": "input",
-            "format": "video/mp4"
-          }
-        }
-      }
-    },
-    {
-      "id": 2,
-      "type": "VHS_VideoCombine",
-      "pos": [
-        1154.958677685951,
-        306.6942148760332
-      ],
-      "size": [
-        334.1807744573441,
-        334
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 4
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": null
-        },
-        {
-          "name": "meta_batch",
-          "shape": 7,
-          "type": "VHS_BatchManager",
-          "link": null
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "Filenames",
-          "type": "VHS_FILENAMES",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-videohelpersuite",
-        "ver": "1.7.9",
-        "Node name for S&R": "VHS_VideoCombine"
-      },
-      "widgets_values": {
-        "frame_rate": 16,
-        "loop_count": 0,
-        "filename_prefix": "STAR-Upscaled",
-        "format": "video/h264-mp4",
-        "pix_fmt": "yuv420p",
-        "crf": 19,
-        "save_metadata": true,
-        "trim_to_audio": true,
-        "pingpong": false,
-        "save_output": true,
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "filename": "AnimateDiff_00002.mp4",
-            "subfolder": "",
-            "type": "output",
-            "format": "video/h264-mp4",
-            "frame_rate": 15,
-            "workflow": "AnimateDiff_00002.png",
-            "fullpath": "/notebooks/output_images/AnimateDiff_00002.mp4"
-          }
-        }
-      }
-    },
-    {
-      "id": 5,
-      "type": "STARVSRNode",
-      "pos": [
-        702.5652892561982,
-        306.85702479338863
-      ],
-      "size": [
-        403.3057851239671,
-        447.8347107438017
+        193.530859375,
+        106
       ],
       "flags": {},
       "order": 2,
       "mode": 0,
       "inputs": [
         {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 3
+          "name": "video",
+          "type": "VIDEO",
+          "link": 9
         }
       ],
       "outputs": [
         {
-          "name": "IMAGE",
+          "name": "images",
           "type": "IMAGE",
           "links": [
-            4
+            10,
+            15
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            12
+          ]
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            11
+          ]
+        },
+        {
+          "name": "bit_depth",
+          "type": "COMBO",
+          "links": null
+        },
+        {
+          "name": "color_space",
+          "type": "COMBO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.0",
+        "Node name for S&R": "GetVideoComponents"
+      }
+    },
+    {
+      "id": 8,
+      "type": "LoadVideo",
+      "pos": [
+        -499.32137264835814,
+        22.62530101010089
+      ],
+      "size": [
+        282.798828125,
+        233.07434082031253
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            9
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfyui-starwrapper",
-        "ver": "6b73e1d50f16357c0f669910120b990097ac7b9e",
-        "Node name for S&R": "STARVSRNode"
+        "cnr_id": "comfy-core",
+        "ver": "0.34.0",
+        "Node name for S&R": "LoadVideo"
       },
       "widgets_values": [
-        "Light Degradation",
-        "fp8",
-        "An alpaca turning it's head",
-        720,
-        32,
-        5.5,
-        "dpmpp_2m_sde",
-        "fast",
-        15,
-        42,
-        "fixed"
-      ]
+        "aptlq.mp4",
+        "image"
+      ],
+      "widgets_values_named": {
+        "file": "aptlq.mp4",
+        "upload": "image"
+      }
     },
     {
-      "id": 7,
-      "type": "MarkdownNote",
+      "id": 2,
+      "type": "STARVSR_ModelLoader",
       "pos": [
-        700,
-        810
+        146.30726868686887,
+        22.685437373737347
       ],
       "size": [
-        407.29999999999995,
-        232.70000000000005
+        270,
+        82
       ],
       "flags": {},
       "order": 1,
       "mode": 0,
       "inputs": [],
-      "outputs": [],
-      "properties": {},
-      "widgets_values": [
-        "# Recommended for Video Upscale Only Single Frame Output is weird.\n\n# VRAM Comsumption\n\n## 960p 45 GB\n\n## 720p 33 GB"
+      "outputs": [
+        {
+          "name": "STAR model",
+          "type": "STARVSR_MODEL",
+          "links": [
+            1,
+            4,
+            6
+          ]
+        }
       ],
-      "color": "#432",
-      "bgcolor": "#653"
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_ModelLoader"
+      },
+      "widgets_values": [
+        "Heavy Degradation",
+        "fp8"
+      ],
+      "widgets_values_named": {
+        "model": "Heavy Degradation",
+        "precision": "fp8"
+      }
+    },
+    {
+      "id": 3,
+      "type": "STARVSR_PrepareVideo",
+      "pos": [
+        148.3280505050508,
+        155.97717373737316
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "prepared video",
+          "type": "STARVSR_VIDEO",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_PrepareVideo"
+      },
+      "widgets_values": [
+        720
+      ],
+      "widgets_values_named": {
+        "resolution": 720
+      }
+    },
+    {
+      "id": 4,
+      "type": "STARVSR_TextEncode",
+      "pos": [
+        72.20270505050507,
+        261.3788373737376
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "star_model",
+          "type": "STARVSR_MODEL",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STAR conditioning",
+          "type": "STARVSR_CONDITIONING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_TextEncode"
+      },
+      "widgets_values": [
+        "a good video"
+      ],
+      "widgets_values_named": {
+        "prompt": "a good video"
+      }
+    },
+    {
+      "id": 1,
+      "type": "STARVSR_Sample",
+      "pos": [
+        513.2566363636356,
+        25.84516666666659
+      ],
+      "size": [
+        298,
+        262
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "star_model",
+          "type": "STARVSR_MODEL",
+          "link": 1
+        },
+        {
+          "name": "video",
+          "type": "STARVSR_VIDEO",
+          "link": 2
+        },
+        {
+          "name": "conditioning",
+          "type": "STARVSR_CONDITIONING",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STAR latent",
+          "type": "STARVSR_LATENT",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_Sample"
+      },
+      "widgets_values": [
+        32,
+        7.5,
+        "dpmpp_2m_sde",
+        "fast",
+        15,
+        352752694355597,
+        "randomize"
+      ],
+      "widgets_values_named": {
+        "max_chunk_len": 32,
+        "cfg": 7.5,
+        "sampler": "dpmpp_2m_sde",
+        "solver_mode": "fast",
+        "steps": 15,
+        "seed": 352752694355597,
+        "control_after_generate": "randomize"
+      }
+    },
+    {
+      "id": 5,
+      "type": "STARVSR_Decode",
+      "pos": [
+        869.1597827493695,
+        24.415737373737294
+      ],
+      "size": [
+        272.826171875,
+        78
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "star_model",
+          "type": "STARVSR_MODEL",
+          "link": 6
+        },
+        {
+          "name": "latent",
+          "type": "STARVSR_LATENT",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "raw images",
+          "type": "IMAGE",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_Decode"
+      },
+      "widgets_values": [
+        1
+      ],
+      "widgets_values_named": {
+        "vae_decode_chunk": 1
+      }
+    },
+    {
+      "id": 10,
+      "type": "STARVSR_ColorFix",
+      "pos": [
+        865.1105050505059,
+        153.31000101010082
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 14
+        },
+        {
+          "name": "reference_images",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-starwrapper",
+        "ver": "6827502da631a5fe9499e4f7af1847bcea29ddb1",
+        "Node name for S&R": "STARVSR_ColorFix"
+      },
+      "widgets_values": [
+        "wavelet"
+      ],
+      "widgets_values_named": {
+        "method": "wavelet"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CreateVideo",
+      "pos": [
+        1203.9880323232376,
+        5.058755555555553
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 13
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 12
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.0",
+        "Node name for S&R": "CreateVideo"
+      },
+      "widgets_values": [
+        30,
+        "auto",
+        "sRGB"
+      ],
+      "widgets_values_named": {
+        "fps": 30,
+        "bit_depth": "auto",
+        "color_space": "sRGB"
+      }
+    },
+    {
+      "id": 7,
+      "type": "SaveVideo",
+      "pos": [
+        1521.194541414146,
+        10.096301010100962
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.0"
+      },
+      "widgets_values": [
+        "video/STAR",
+        "auto",
+        "auto",
+        "auto"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "video/STAR",
+        "format": "auto",
+        "format.codec": "auto",
+        "codec": "auto"
+      }
     }
   ],
   "links": [
     [
-      3,
+      1,
+      2,
+      0,
+      1,
+      0,
+      "STARVSR_MODEL"
+    ],
+    [
+      2,
       3,
       0,
+      1,
+      1,
+      "STARVSR_VIDEO"
+    ],
+    [
+      3,
+      4,
+      0,
+      1,
+      2,
+      "STARVSR_CONDITIONING"
+    ],
+    [
+      4,
+      2,
+      0,
+      4,
+      0,
+      "STARVSR_MODEL"
+    ],
+    [
       5,
+      1,
+      0,
+      5,
+      1,
+      "STARVSR_LATENT"
+    ],
+    [
+      6,
+      2,
+      0,
+      5,
+      0,
+      "STARVSR_MODEL"
+    ],
+    [
+      8,
+      6,
+      0,
+      7,
+      0,
+      "VIDEO"
+    ],
+    [
+      9,
+      8,
+      0,
+      9,
+      0,
+      "VIDEO"
+    ],
+    [
+      10,
+      9,
+      0,
+      3,
       0,
       "IMAGE"
     ],
     [
-      4,
+      11,
+      9,
+      2,
+      6,
+      2,
+      "FLOAT"
+    ],
+    [
+      12,
+      9,
+      1,
+      6,
+      1,
+      "AUDIO"
+    ],
+    [
+      13,
+      10,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      14,
       5,
       0,
-      2,
+      10,
       0,
+      "IMAGE"
+    ],
+    [
+      15,
+      9,
+      0,
+      10,
+      1,
       "IMAGE"
     ]
   ],
-  "groups": [],
+  "groups": [
+    {
+      "id": 1,
+      "title": "STAR Upscale",
+      "bounding": [
+        62.20270505050506,
+        -47.31456262626267,
+        1089.783249573864,
+        518.6934000000003
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    }
+  ],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.9090909090909091,
+      "scale": 0.7541172901667643,
       "offset": [
-        188.19998248026926,
-        -115.73694602483096
+        638.2137893419274,
+        375.3897474925265
       ]
     },
-    "frontendVersion": "1.35.9",
-    "workflowRendererVersion": "LG",
+    "frontendVersion": "1.51.9",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
